@@ -5,9 +5,11 @@ import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import androidx.room.TypeConverters;
 
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -26,14 +28,14 @@ public class Note {
     @TypeConverters({TagsConverter.class})
     ArrayList<String> mTags;
 
-    String mDate;
+    @TypeConverters({DataConvertor.class})
+    Date mDate;
 
     public Note() {
         mTitle = "";
         mBody = "";
         mTags = new ArrayList<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault());
-        mDate = sdf.format(Calendar.getInstance().getTime());
+        mDate = new Date();
         mUniqueID = UUID.randomUUID().toString();
     }
 
@@ -53,7 +55,7 @@ public class Note {
         return mBody;
     }
 
-    public String getDate() {
+    public Date getDate() {
         return mDate;
     }
 

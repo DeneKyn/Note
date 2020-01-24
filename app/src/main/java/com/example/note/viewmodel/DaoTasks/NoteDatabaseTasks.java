@@ -1,7 +1,11 @@
 package com.example.note.viewmodel.DaoTasks;
 
+import android.app.Application;
 import android.os.AsyncTask;
 
+import androidx.lifecycle.LiveData;
+
+import com.example.note.AppDatabase;
 import com.example.note.Note;
 import com.example.note.NoteDao;
 
@@ -9,15 +13,21 @@ import java.util.List;
 
 public final class NoteDatabaseTasks {
 
-    private final NoteDao mNoteDao;
+    private NoteDao mNoteDao;
+    private LiveData<List<Note>> allNotes;
 
-    public NoteDatabaseTasks(NoteDao noteDao) {
-        mNoteDao = noteDao;
+
+    public NoteDatabaseTasks(Application application) {
+        AppDatabase database = AppDatabase.getInstance(application);
+        mNoteDao = database.noteDao();
+        allNotes = mNoteDao.getAll();
     }
 
-    public void getAllNote(final List<Note> notes, final List<Note> currentNotes) {
-        new GetAllNoteAsyncTask(mNoteDao, notes, currentNotes).execute();
+    public LiveData<List<Note>> getAll() {
+        return allNotes;
     }
+
+
 
     public void updateNote(final Note note) {
         new UpdateNoteAsyncTask(mNoteDao).execute(note);
@@ -31,24 +41,8 @@ public final class NoteDatabaseTasks {
         new InsertNoteAsyncTask(mNoteDao).execute(note);
     }
 
-    private static class GetAllNoteAsyncTask extends AsyncTask<Note, Void, Void> {
-        private NoteDao mNoteDao;
-        private List<Note> mNotes;
-        private List<Note> mCurrentNotes;
 
-        private GetAllNoteAsyncTask(NoteDao noteDao, List<Note> notes, List<Note> currentNotes) {
-            mNoteDao = noteDao;
-            mNotes = notes;
-            mCurrentNotes = currentNotes;
-        }
 
-        @Override
-        protected Void doInBackground(Note... notes) {
-            mNotes.addAll(mNoteDao.getAll());
-            mCurrentNotes.addAll(mNotes);
-            return null;
-        }
-    }
 
     private static class UpdateNoteAsyncTask extends AsyncTask<Note, Void, Void> {
         private NoteDao mNoteDao;

@@ -2,6 +2,7 @@ package com.example.note;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
@@ -19,6 +20,7 @@ public class Tag implements Comparable<Tag> {
 
     public String mTag;
 
+    @Ignore
     public boolean selected;
 
     public Tag(String tag) {

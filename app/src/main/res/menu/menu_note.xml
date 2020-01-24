@@ -3,21 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:id="@+id/action_sort"
-        android:icon="@drawable/sort"
+        android:id="@+id/action_delete"
+        android:icon="@drawable/ic_delete_black_24dp"
         android:title="sort"
         app:showAsAction="always"/>
 
     <item
-        android:id="@+id/action_clear"
-        android:icon="@drawable/ic_refresh_black_24dp"
-        android:title="sort"
+        android:id="@+id/action_save"
+        android:icon="@drawable/ic_save_black_24dp"
+        android:title="save"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/action_add"
+        android:icon="@drawable/add"
+        android:title="select"
         app:showAsAction="always"/>
 
-    <item
-        android:id="@+id/action_tag"
-        android:icon="@drawable/tag"
-        android:title="tags select"
-        app:showAsAction="always"/>
 
 </menu>

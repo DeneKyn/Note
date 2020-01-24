@@ -1,13 +1,23 @@
 package com.example.note.fragments;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
+import androidx.navigation.fragment.NavHostFragment;
 
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -15,40 +25,58 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 
-import com.example.note.activity.MainActivity;
-import com.example.note.viewmodel.MainViewModel;
 import com.example.note.Note;
 import com.example.note.R;
 import com.example.note.Tag;
+import com.example.note.activity.MainActivity;
+import com.example.note.viewmodel.MainViewModel;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class TagsFragment extends Fragment {
 
-    ListView listView;
-    MainViewModel viewModel;
-    MainActivity activity;
-    ArrayAdapter<String> adapter;
-    List<String> tagsString;
-    List<Tag> mTags;
+    private MainViewModel viewModel;
+
+    private ListView listView;
+    private ArrayAdapter<String> adapter;
+    private List<Tag> mTags;
     private Note mNote;
+
+    private AlertDialog mAddTagAlertDialog;
+
+    public TagsFragment() {
+        // Required empty public constructor
+    }
 
 
     @Override
-    public View onCreateView(LayoutInflater inflater,
-                             ViewGroup container,
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        setRetainInstance(true);
         View view = inflater.inflate(R.layout.fragment_tags, container, false);
-        activity = (MainActivity) getActivity();
-        listView = view.findViewById(R.id.listView);
-        viewModel = activity.getMainViewModel();
-        mTags = viewModel.getTags();
-        tagsString = getTagsStringList(mTags);
-        adapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_multiple_choice, tagsString);
+        setHasOptionsMenu(true);
+        viewModel = ViewModelProviders.of(getActivity()).get(MainViewModel.class);
 
-        listView.setAdapter(adapter);
+        mNote = viewModel.mCurrentNote;
+        listView = view.findViewById(R.id.listView);
+        mTags = new ArrayList<>();
+
+
+
+
+        viewModel.getAllTags().observe(this, new Observer<List<Tag>>() {
+            @Override
+            public void onChanged(@Nullable List<Tag> tags) {
+                if (tags != null){
+                mTags = tags;
+                //tagsString = getTagsStringList(tags);
+                adapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_list_item_multiple_choice, getTagsStringList(tags));
+                listView.setAdapter(adapter);
+                setItemsChecked();
+                }
+                adapter.notifyDataSetChanged();
+            }
+        });
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -61,38 +89,62 @@ public class TagsFragment extends Fragment {
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                Tag tag = viewModel.getTags().get(position);
+                Tag tag = viewModel.getAllTags().getValue().get(position);
                 viewModel.removeTag(tag);
-                tagsString.remove(tag.mTag);
-                adapter.notifyDataSetChanged();
+                String deleteId = tag.mUniqueID;
+                List<Note> notes = viewModel.getAll().getValue();
+                for (Note  note : notes){
+                    if (note.getTags().contains(deleteId)){
+                        note.getTags().remove(deleteId);
+                        viewModel.updateNote(note);
+                    }
+                }
                 return false;
             }
         });
 
-        setItemsChecked();
+        createAddTagDialog();
 
-        setTextWatcher((EditText) view.findViewById(R.id.findTags));
 
         return view;
     }
 
-    void changeBoolValue(int position, boolean value) {
+    @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_tag, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_add:
+                mAddTagAlertDialog.show();
+                break;
+            default:
+                // Not one of ours. Perform default menu processing
+                return super.onOptionsItemSelected(item);
+        }
+        return true;
+    }
+
+    private List<String> getTagsStringList(List<Tag> tags) {
+        List<String> tagsString = new ArrayList<>();
+        for (Tag tag : tags) {
+            tagsString.add(tag.mTag);
+        }
+        return tagsString;
+    }
+
+    private void changeBoolValue(int position, boolean value) {
         if (value) {
-            mNote.addTag(mTags.get(position).mUniqueID);
+
+            String id = mTags.get(position).mUniqueID;
+            mNote.addTag(id);
+
+            viewModel.addedTag.add(id);
         } else {
             mNote.removeTag(mTags.get(position).mUniqueID);
         }
-    }
-
-    public void updateListView() {
-        tagsString.clear();
-        mTags = viewModel.getTags();
-        tagsString.addAll(getTagsStringList(mTags));
-        adapter.notifyDataSetChanged();
-    }
-
-    public void setNote(Note note) {
-        mNote = note;
     }
 
     private void setItemsChecked() {
@@ -105,56 +157,35 @@ public class TagsFragment extends Fragment {
         }
     }
 
-    private void setTextWatcher(EditText editText) {
-        editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
-            }
+    private void createAddTagDialog() {
+        LayoutInflater li = LayoutInflater.from(getActivity());
+        View myAlert = li.inflate(R.layout.my_alert, null);
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if(before > count){
-                    initList();
-                    searchItem(s.toString());
-                } else {
-                    searchItem(s.toString());
-                }
-            }
+        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getActivity());
 
-            @Override
-            public void afterTextChanged(Editable s) {
+        dialogBuilder.setView(myAlert);
 
-            }
-        });
-    }
+        final EditText userInput = myAlert.findViewById(R.id.input_text);
 
-    private void initList() {
-        mTags = viewModel.getTags();
-        tagsString.clear();
-        tagsString.addAll(getTagsStringList(mTags));
-    }
+        dialogBuilder
+                .setCancelable(false)
+                .setPositiveButton("OK",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                viewModel.addTag(new Tag(userInput.getText().toString()));
+                                userInput.setText("");
+                            }
+                        })
+                .setNegativeButton("Cancel",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog,int id) {
+                                dialog.cancel();
+                                userInput.setText("");
+                            }
+                        });
 
-    private void searchItem(String textToSearch){
-        ArrayList<Tag> tmp = new ArrayList<>();
-        for(Tag item : mTags){
-            if(item.mTag.contains(textToSearch) == false){
-                tmp.add(item);
-            }
-        }
-        mTags.removeAll(tmp);
-        tagsString.clear();
-        tagsString.addAll(getTagsStringList(mTags));
-        setItemsChecked();
-        adapter.notifyDataSetChanged();
-    }
-
-
-    private List<String> getTagsStringList(List<Tag> tags) {
-        List<String> tagsString = new ArrayList<>();
-        for (Tag tag : tags) {
-            tagsString.add(tag.mTag);
-        }
-        return tagsString;
+        mAddTagAlertDialog = dialogBuilder.create();
     }
 }

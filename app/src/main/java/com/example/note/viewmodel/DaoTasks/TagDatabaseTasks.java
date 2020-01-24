@@ -1,7 +1,11 @@
 package com.example.note.viewmodel.DaoTasks;
 
+import android.app.Application;
 import android.os.AsyncTask;
 
+import androidx.lifecycle.LiveData;
+
+import com.example.note.AppDatabase;
 import com.example.note.Note;
 import com.example.note.NoteDao;
 import com.example.note.Tag;
@@ -12,14 +16,18 @@ import java.util.List;
 public class TagDatabaseTasks {
 
     private final TagDao mTagDao;
+    private LiveData<List<Tag>> allTags;
 
-    public TagDatabaseTasks(final TagDao tagDao) {
-        mTagDao = tagDao;
+    public TagDatabaseTasks(Application application) {
+        AppDatabase database = AppDatabase.getInstance(application);
+        mTagDao = database.tagDao();
+        allTags = mTagDao.getAll();
     }
 
-    public void getAllTag(final List<Tag> tags) {
-        new GetAllTagAsyncTask(mTagDao ,tags).execute();
+    public LiveData<List<Tag>> getAll() {
+        return allTags;
     }
+
 
     public void insertTag(final Tag tag) {
         new InsertTagAsyncTask(mTagDao).execute(tag);
@@ -29,22 +37,7 @@ public class TagDatabaseTasks {
         new TagDatabaseTasks.DeleteTagAsyncTask(mTagDao).execute(tag);
     }
 
-    private static class GetAllTagAsyncTask extends AsyncTask<Tag, Void, Void> {
-        private TagDao mTagDao;
-        private List<Tag> mTags;
 
-        private GetAllTagAsyncTask(TagDao tagDao, List<Tag> tag) {
-            mTagDao = tagDao;
-            mTags = tag;
-        }
-
-        @Override
-        protected Void doInBackground(Tag... tags) {
-
-            mTags.addAll(mTagDao.getAll());
-            return null;
-        }
-    }
 
     private static class InsertTagAsyncTask extends AsyncTask<Tag, Void, Void> {
         private TagDao mTagDao;
